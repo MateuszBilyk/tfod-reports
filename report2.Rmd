@@ -1,0 +1,54 @@
+---
+title: "Report 2"
+author: "Mateusz Biłyk"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Exercise 1
+## a)
+
+```{r results='hide'}
+x <- seq(-4, 4, length=100)
+y <- pnorm(x)
+plot(x,y, type = "l", lwd = 2, xlab = "", ylab = "")
+df <- c(1,3,5,10,50,100)
+y <- sapply(df,function(d) pt(x, d))
+apply(y,2,function(y) lines(x,y,col="red"))
+```
+
+## b)
+We have $T=\frac{\chi_{df}^2-df}{\sqrt{2df}}$ so $P[T \leq t]=P[\chi_{df}^2 \leq t\sqrt{2df}+df]$
+```{r results='hide'}
+x <- seq(-4, 4, length=100)
+y <- pnorm(x)
+plot(x,y, type = "l", lwd = 2, xlab = "", ylab = "")
+df <- c(1,3,5,10,50,100)
+y <- sapply(df,function(d) pchisq(x*sqrt(2*d)+d, d))
+apply(y,2,function(y) lines(x,y,col="red"))
+```
+In both cases we can say that the variables converge in probability to the normal distributed variable.
+
+# Exercise 2
+## a)
+$P_{H_0}[\overline{X}>\overline{x}]=P_{H_0}[\sum{X_i}>n\overline{x}]=Q(n\overline{x}+1,5n)$
+Example of graph of p-values for this test for $n=4$:
+```{r}
+ex2pvalue <- function(n,x_mean){1-pgamma(n*x_mean+1,5*n)}
+x <- seq(0, 10, length=100)
+y <- ex2pvalue(4,x)
+plot(x,y, type = "l", lwd = 2, xlab = "", ylab = "")
+```
+## b)
+```{r}
+y <- sapply(1:1000,function(a) ex2pvalue(100,mean(rpois(100, 5))) )
+hist(y,
+main="p-values of 1000 test with n=100",
+xlab="p-values",
+xlim=c(0,1),
+col="darkmagenta",
+freq=FALSE
+)
+```
+P-values are uniformly distributed as they should be.
+ 
