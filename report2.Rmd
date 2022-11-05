@@ -31,15 +31,20 @@ In both cases we can say that the variables converge in probability to the norma
 
 # Exercise 2
 ## a)
-$P_{H_0}[\overline{X}>\overline{x}]=P_{H_0}[\sum{X_i}>n\overline{x}]=Q(n\overline{x}+1,5n)$
+$P_{H_0}[\overline{X}>\overline{x}]=P_{H_0}[\sum{X_i}>n\overline{x}]=Q(floor(n\overline{x}+1) ,5n)$
 Example of graph of p-values for this test for $n=4$:
 ```{r}
-ex2pvalue <- function(n,x_mean){1-pgamma(n*x_mean+1,5*n)}
+
+ex2pvalue <- function(n,x_mean){
+  1-pgamma(5*n, floor(n*x_mean+1), lower = FALSE)
+}
 x <- seq(0, 10, length=100)
 y <- ex2pvalue(4,x)
 plot(x,y, type = "l", lwd = 2, xlab = "", ylab = "")
 ```
+
 ## b)
+
 ```{r}
 y <- sapply(1:1000,function(a) ex2pvalue(100,mean(rpois(100, 5))) )
 hist(y,
@@ -50,5 +55,194 @@ col="darkmagenta",
 freq=FALSE
 )
 ```
-P-values are uniformly distributed as they should be.
- 
+P-values are more or less uniformly distributed as they should be.
+
+## c)
+```{r}
+
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-sapply(1:1000,function(a) {ex2pvalue(100,mean(rpois(100, 5)))})
+    if(min(y)<= 0.05/1000) return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+
+```{r}
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-sapply(1:1000,function(a) ex2pvalue(100,mean(rpois(100, 5))))
+    if(-sum(2*log(y))>= qchisq(1-0.05, 2*1000))return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+
+Computer calculations are not always perfect. Probability of type one error is slightly different because in the Fisher test vector y does not have always perfect uniform distribution which following code proves:
+```{r}
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-runif(1000,0,1)
+    if(-sum(2*log(y))>= qchisq(1-0.05, 2*1000))return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+
+## d) 
+Power of the test is probability that when $H_1$ is true we reject $H_0$
+- Needle in a haystack
+Bonferoni:
+```{r}
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-sapply(1:1000,function(a){
+        if(a==1){ return(ex2pvalue(100,mean(rpois(100, 7))))}
+        if(a>1){return(ex2pvalue(100,mean(rpois(100, 5))))}
+      })
+    y<-sapply(y,sum)
+    
+    if(min(y)<= 0.05/1000) return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+
+Fisher
+
+```{r}
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-sapply(1:1000,function(a){
+        if(a==1){return(ex2pvalue(100,mean(rpois(100, 7))))}
+        if(a>1){return(ex2pvalue(100,mean(rpois(100, 5))))}
+      })
+    y<-sapply(y, sum)
+    if(-sum(2*log(y))>= qchisq(1-0.05, 2*1000))return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+- Many small effects
+Bonferoni:
+```{r}
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-sapply(1:1000,function(a){
+        if(a<=100){ return(ex2pvalue(100,mean(rpois(100, 5.2))))}
+        if(a>100){return(ex2pvalue(100,mean(rpois(100, 5))))}
+      })
+    y<-sapply(y,sum)
+    if(min(y)<= 0.05/1000) return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+
+Fisher
+```{r}
+odp <- sapply(1:10^4, function(a)
+  {
+    y<-sapply(1:1000,function(a){
+        if(a<=100){return(ex2pvalue(100,mean(rpois(100, 5.2))))}
+        if(a>100){return(ex2pvalue(100,mean(rpois(100, 5))))}
+      })
+    y<-sapply(y, sum)
+    if(-sum(2*log(y))>= qchisq(1-0.05, 2*1000))return(1)
+  })
+sum(sapply(odp, sum))/10^4
+```
+
+# Exercise 3
+
+```{r}
+x <- 2:100000
+y <- sapply(x,function(a){max(rnorm(a))/sqrt(2*log(a))})
+plot(x,y, type = "l", lwd = 2, xlab = "", ylab = "")
+y <- sapply(1:10,function(a){
+  sapply(x,function(a){max(rnorm(a))/sqrt(2*log(a))})
+  })
+apply(y,2,function(y) lines(x,y,col="red"))
+```
+
+We can see in the graph $R_n$ converges to 1 as n goes to infinity. 
+
+# Exercise 4
+## all points
+Under $H_0$
+```{r results='hide'}
+ex4L <- function(Y){
+  n <- length(Y)
+  epsilon <- 0.1
+  gamma <- (1-epsilon)*sqrt(2*log(n))
+  exponential<- function(y) gamma*y-gamma^2/2
+  return(1/n*sum(exp(exponential(Y))))
+}
+ex4Lapprox <- function(Y){
+  n <- length(Y)
+  epsilon <- 0.1
+  gamma <- (1-epsilon)*sqrt(2*log(n))
+  exponential <- function(y){
+    if(y<sqrt(2*log(n))){return(exp(gamma*y-gamma^2/2))}
+    else{return(0)}
+  }
+  return(1/n*sum(sapply(Y,function(y) exponential(y))))
+}
+draw_hist <- function(d){
+  print(var(d))
+  hist(d,
+main="",xlab="",
+xlim=c(min(d),max(d)),
+col="darkmagenta",freq=FALSE)
+}
+samel<-sapply(c(10^3,10^4,10^5),function(n){
+  I<-diag(n)
+  mu<-numeric(n)
+  d<-sapply(1:10^3,function(a) {
+    Y<-mvtnorm::rmvnorm(1, mu, I)
+    Y<-sapply(Y, sum)
+    return (c(ex4L(Y),ex4Lapprox(Y)))})
+  draw_hist(d[1,])
+  draw_hist(d[2,])
+  same<-apply(d,2,function(a){
+    if(a[1]==a[2])return(1)
+    else return(0)
+  })
+  return(sum(sapply(same,sum))/10^3)
+})
+print(samel)
+
+```
+
+Under $H_1$
+```{r results='hide'}
+ex4L <- function(Y){
+  n <- length(Y)
+  epsilon <- 0.1
+  gamma <- (1-epsilon)*sqrt(2*log(n))
+  exponential<- function(y) gamma*y-gamma^2/2
+  return(1/n*sum(exp(exponential(Y))))
+}
+ex4Lapprox <- function(Y){
+  n <- length(Y)
+  epsilon <- 0.1
+  gamma <- (1-epsilon)*sqrt(2*log(n))
+  exponential <- function(y){
+    if(y<sqrt(2*log(n))){return(exp(gamma*y-gamma^2/2))}
+    else{return(0)}
+  }
+  return(1/n*sum(sapply(Y,function(y) exponential(y))))
+}
+draw_hist <- function(d){
+  hist(d,
+main="",xlab="",
+xlim=c(min(d),max(d)),
+col="darkmagenta",freq=FALSE)
+}
+sapply(c(10^3,10^4,10^5),function(n){
+  I<-diag(n)
+  mu<-numeric(n)
+  mu[1]<-(1-0.1)*sqrt(2*log(n))
+  d<-sapply(1:10^3,function(a) {
+    Y<-mvtnorm::rmvnorm(1, mu, I)
+    Y<-sapply(Y, sum)
+    return (c(ex4L(Y),ex4Lapprox(Y)))})
+  draw_hist(d[1,])
+  draw_hist(d[2,])
+})
+```
