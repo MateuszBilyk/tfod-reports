@@ -164,6 +164,8 @@ We can see in the graph $R_n$ converges to 1 as n goes to infinity.
 
 # Exercise 4
 ## all points
+We use theorem that if $X_1,X_2,..,X_n$ are uncorrelated and their combined distribution is normal then they are independent.
+Thanks to these theorem we can draw samples independently using rnorm function. 
 Under $H_0$
 ```{r results='hide'}
 ex4L <- function(Y){
@@ -191,11 +193,9 @@ xlim=c(min(d),max(d)),
 col="darkmagenta",freq=FALSE)
 }
 samel<-sapply(c(10^3,10^4,10^5),function(n){
-  I<-diag(n)
-  mu<-numeric(n)
+  print(n)
   d<-sapply(1:10^3,function(a) {
-    Y<-mvtnorm::rmvnorm(1, mu, I)
-    Y<-sapply(Y, sum)
+    Y<-rnorm(n, 0, 1)
     return (c(ex4L(Y),ex4Lapprox(Y)))})
   draw_hist(d[1,])
   draw_hist(d[2,])
@@ -235,14 +235,33 @@ xlim=c(min(d),max(d)),
 col="darkmagenta",freq=FALSE)
 }
 sapply(c(10^3,10^4,10^5),function(n){
-  I<-diag(n)
-  mu<-numeric(n)
-  mu[1]<-(1-0.1)*sqrt(2*log(n))
   d<-sapply(1:10^3,function(a) {
-    Y<-mvtnorm::rmvnorm(1, mu, I)
-    Y<-sapply(Y, sum)
+    Y<-rnorm(1, (1-0.1)*sqrt(2*log(n)), 0)
+    Y<-append(Y,rnorm(n-1,0,1))
     return (c(ex4L(Y),ex4Lapprox(Y)))})
   draw_hist(d[1,])
   draw_hist(d[2,])
 })
 ```
+We know that $L = \tilde{L} \iff \forall_i Y_i<\sqrt{2\log{n}}$.
+It follows that $P_{H_0}(L = \tilde{L})=\Phi^n(\sqrt{2\log{n}})$
+These values for $n\in \{10^3,10^4,10^5\}$ are about: $0.9,0.915,0.923$
+
+
+# Exercise 5
+
+```{r}
+apply(expand.grid(c(0.05,0.2),c(500,5000,50000)),1,function(a){
+  n<-a[2]
+  epsi<-a[1]
+  crit_value <- sapply(1:10^5,function(i){
+    Y<-rnorm(1,(1+epsi)*sqrt(2*log(n)), 0)
+    Y<-append(Y,rnorm(n-1,0,1))
+    return(log(ex4L(Y)))
+  })  
+  sort(sapply(crit_value,sum))
+  crit_value<-crit_value[n/100*5]
+  print(crit_value)
+})
+```
+
