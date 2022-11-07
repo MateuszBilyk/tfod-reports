@@ -236,7 +236,7 @@ col="darkmagenta",freq=FALSE)
 }
 sapply(c(10^3,10^4,10^5),function(n){
   d<-sapply(1:10^3,function(a) {
-    Y<-rnorm(1, (1-0.1)*sqrt(2*log(n)), 0)
+    Y<-rnorm(1, (1-0.1)*sqrt(2*log(n)), 1)
     Y<-append(Y,rnorm(n-1,0,1))
     return (c(ex4L(Y),ex4Lapprox(Y)))})
   draw_hist(d[1,])
@@ -250,18 +250,33 @@ These values for $n\in \{10^3,10^4,10^5\}$ are about: $0.9,0.915,0.923$
 
 # Exercise 5
 
-```{r}
-apply(expand.grid(c(0.05,0.2),c(500,5000,50000)),1,function(a){
+```{r results='hide'}
+ans<-apply(expand.grid(c(0.05,0.2),c(500,5000,50000)),1,function(a){
   n<-a[2]
   epsi<-a[1]
-  crit_value <- sapply(1:10^5,function(i){
-    Y<-rnorm(1,(1+epsi)*sqrt(2*log(n)), 0)
-    Y<-append(Y,rnorm(n-1,0,1))
+  crit_value <- sapply(1:10^3,function(i){
+    Y<-rnorm(n)
     return(log(ex4L(Y)))
   })  
   sort(sapply(crit_value,sum))
-  crit_value<-crit_value[n/100*5]
-  print(crit_value)
+  crit_value<-crit_value[10^3/100*5]
+ 
+  pans<-sapply(1:10^3,function(a){
+    Y<-mean(rnorm(10^3, (1+epsi)*sqrt(2*log(n)), 1))
+    Y<-append(Y,sapply(1:n-1,function(a) mean(rnorm(10^3,0,1))))
+    powers<- c(0,0,0)
+    #Neyman-Pearson
+    if(log(ex4L(Y))>=crit_value) powers[1] <- 1
+    pi_val<-(1-pnorm(10^3*abs(Y),0,sqrt(10^3)))+(pnorm(-10^3*abs(Y),0,sqrt(10^3)))
+    #Bonferoni
+    if(min(pi_val)<=0.05/n)powers[2] <-1
+    #Fisher
+    if(-sum(2*log(pi_val))>qchisq(1-0.05, 2*n))powers[3] <-1
+    return(powers)
+  })
+  pans<-apply(pans,1, sum)
+  return(pans/10^3)
 })
+print(ans)
 ```
 
